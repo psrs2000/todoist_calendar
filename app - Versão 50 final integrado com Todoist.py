@@ -2915,7 +2915,7 @@ def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
             
             # Procurar pela tarefa que contém nome + horário
             for tarefa in tarefas:
-                if nome_cliente in tarefa['content'] and horario in tarefa['content']:
+                if nome_cliente in tarefa['content']:
                     print(f"✅ Tarefa encontrada: {tarefa['content']} (ID: {tarefa['id']})")
                     return tarefa['id']
             
