@@ -597,7 +597,7 @@ def cancelar_agendamento(nome, telefone, data):
                     horario = agendamento[2]
                     
                     try:
-                        sucesso = deletar_tarefa_todoist(data, nome_cliente)
+                        sucesso = deletar_tarefa_todoist(data, nome)
                         if sucesso:
                             eventos_deletados += 1
                             print(f"✅ Tarefa Todoist removida: {horario}")
