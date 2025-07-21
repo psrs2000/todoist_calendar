@@ -597,7 +597,7 @@ def cancelar_agendamento(nome, telefone, data):
                     horario = agendamento[2]
                     
                     try:
-                        sucesso = deletar_tarefa_todoist(data, horario, nome_cliente)
+                        sucesso = deletar_tarefa_todoist(data, nome_cliente)
                         if sucesso:
                             eventos_deletados += 1
                             print(f"✅ Tarefa Todoist removida: {horario}")
@@ -659,7 +659,7 @@ def cancelar_agendamento(nome, telefone, data):
                         horario = agendamento[2]
                         
                         try:
-                            sucesso = deletar_tarefa_todoist(data, horario, nome)
+                            sucesso = deletar_tarefa_todoist(data, nome)
                             if sucesso:
                                 eventos_deletados += 1
                                 print(f"✅ Tarefa Todoist removida: {horario}")
@@ -812,7 +812,7 @@ def atualizar_status_agendamento(agendamento_id, novo_status):
                 # Remover tarefa
                 remover_cancelados = obter_configuracao("todoist_remover_cancelados", True)
                 if remover_cancelados:
-                    sucesso = deletar_tarefa_todoist(data, horario, nome_cliente)
+                    sucesso = deletar_tarefa_todoist(data, nome_cliente)
                     if sucesso:
                         print(f"🗑️ Tarefa Todoist removida: {nome_cliente}")
                 
@@ -2778,7 +2778,7 @@ def atualizar_tarefa_todoist(agendamento_id, nome_cliente, novo_status):
                 
                 if resultado:
                     data, horario = resultado
-                    return deletar_tarefa_todoist(data, horario, nome_cliente)
+                    return deletar_tarefa_todoist(data, nome_cliente)
                 else:
                     print(f"⚠️ Agendamento {agendamento_id} não encontrado para deletar tarefa")
                     return False
@@ -2822,7 +2822,7 @@ def atualizar_tarefa_todoist(agendamento_id, nome_cliente, novo_status):
         print(f"❌ Erro ao atualizar tarefa Todoist: {e}")
         return False
 
-def deletar_tarefa_todoist(data, horario, nome_cliente):
+def deletar_tarefa_todoist(data, nome_cliente):
     """Deleta tarefa do Todoist"""
     try:
         token = obter_client_todoist()
