@@ -2830,7 +2830,7 @@ def deletar_tarefa_todoist(data, nome_cliente):
             return False
         
         # Buscar ID da tarefa
-        tarefa_id = buscar_tarefa_todoist_por_data_hora(data, horario, nome_cliente)
+        tarefa_id = buscar_tarefa_todoist_por_data_hora(data, nome_cliente)
         if not tarefa_id:
             print(f"⚠️ Tarefa Todoist não encontrada para deletar ID {agendamento_id}")
             return True  # Considera sucesso se não existe
@@ -2887,7 +2887,7 @@ def gerar_instrucoes_todoist():
 • **Marca como concluído** quando atendido
 """
  
-def buscar_tarefa_todoist_por_data_hora(data, horario, nome_cliente):
+def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
     """Busca tarefa no Todoist por data/hora ao invés de ID"""
     try:
         token = obter_client_todoist()
