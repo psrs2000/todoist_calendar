@@ -1856,8 +1856,8 @@ def backup_agendamentos_futuros_github():
         csv_data = exportar_agendamentos_csv()
         
         if not csv_data:
-            print("❌ Nenhum dado para backup")
-            return False
+            print("📝 Lista vazia - enviando backup de limpeza")
+            csv_data = "ID,Data,Horário,Nome,Telefone,Email,Status\n"  # CSV vazio com cabeçalho
         
         print("✅ CSV gerado com sucesso")
         
