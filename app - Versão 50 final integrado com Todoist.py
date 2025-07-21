@@ -2772,12 +2772,12 @@ def atualizar_tarefa_todoist(agendamento_id, nome_cliente, novo_status):
             try:
                 conn = conectar()
                 c = conn.cursor()
-                c.execute("SELECT data, horario FROM agendamentos WHERE id = ?", (agendamento_id,))
+                c.execute("SELECT data FROM agendamentos WHERE id = ?", (agendamento_id,))
                 resultado = c.fetchone()
                 conn.close()
                 
                 if resultado:
-                    data, horario = resultado
+                    data = resultado[0]
                     return deletar_tarefa_todoist(data, nome_cliente)
                 else:
                     print(f"⚠️ Agendamento {agendamento_id} não encontrado para deletar tarefa")
