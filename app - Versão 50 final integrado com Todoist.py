@@ -597,7 +597,7 @@ def cancelar_agendamento(nome, telefone, data):
                     horario = agendamento[2]
                     
                     try:
-                        sucesso = deletar_tarefa_todoist(agendamento_id)
+                        sucesso = deletar_tarefa_todoist(agendamento_id, data, horario, nome_cliente)
                         if sucesso:
                             eventos_deletados += 1
                             print(f"✅ Tarefa Todoist removida: {horario}")
@@ -659,7 +659,7 @@ def cancelar_agendamento(nome, telefone, data):
                         horario = agendamento[2]
                         
                         try:
-                            sucesso = deletar_tarefa_todoist(agendamento_id)
+                            sucesso = deletar_tarefa_todoist(agendamento_id, data, horario, nome)
                             if sucesso:
                                 eventos_deletados += 1
                                 print(f"✅ Tarefa Todoist removida: {horario}")
@@ -812,7 +812,7 @@ def atualizar_status_agendamento(agendamento_id, novo_status):
                 # Remover tarefa
                 remover_cancelados = obter_configuracao("todoist_remover_cancelados", True)
                 if remover_cancelados:
-                    sucesso = deletar_tarefa_todoist(agendamento_id)
+                    sucesso = deletar_tarefa_todoist(agendamento_id, data, horario, nome_cliente)
                     if sucesso:
                         print(f"🗑️ Tarefa Todoist removida: {nome_cliente}")
                 
@@ -2768,8 +2768,23 @@ def atualizar_tarefa_todoist(agendamento_id, nome_cliente, novo_status):
                 return False
         
         elif novo_status == 'cancelado':
-            # Deletar tarefa
-            return deletar_tarefa_todoist(agendamento_id)
+            # Buscar dados do agendamento para deletar tarefa
+            try:
+                conn = conectar()
+                c = conn.cursor()
+                c.execute("SELECT data, horario FROM agendamentos WHERE id = ?", (agendamento_id,))
+                resultado = c.fetchone()
+                conn.close()
+                
+                if resultado:
+                    data, horario = resultado
+                    return deletar_tarefa_todoist(agendamento_id, data, horario, nome_cliente)
+                else:
+                    print(f"⚠️ Agendamento {agendamento_id} não encontrado para deletar tarefa")
+                    return False
+            except Exception as e:
+                print(f"❌ Erro ao buscar dados do agendamento: {e}")
+                return False
         
         elif novo_status == 'confirmado':
             # Adicionar label "confirmado"
@@ -2807,7 +2822,7 @@ def atualizar_tarefa_todoist(agendamento_id, nome_cliente, novo_status):
         print(f"❌ Erro ao atualizar tarefa Todoist: {e}")
         return False
 
-def deletar_tarefa_todoist(agendamento_id):
+def deletar_tarefa_todoist(agendamento_id, data, horario, nome_cliente):
     """Deleta tarefa do Todoist"""
     try:
         token = obter_client_todoist()
@@ -2815,7 +2830,7 @@ def deletar_tarefa_todoist(agendamento_id):
             return False
         
         # Buscar ID da tarefa
-        tarefa_id = obter_configuracao(f"todoist_task_{agendamento_id}", "")
+        tarefa_id = buscar_tarefa_todoist_por_data_hora(data, horario, nome_cliente)
         if not tarefa_id:
             print(f"⚠️ Tarefa Todoist não encontrada para deletar ID {agendamento_id}")
             return True  # Considera sucesso se não existe
@@ -2871,6 +2886,48 @@ def gerar_instrucoes_todoist():
 • **Notificações** no seu celular/desktop
 • **Marca como concluído** quando atendido
 """
+ 
+def buscar_tarefa_todoist_por_data_hora(data, horario, nome_cliente):
+    """Busca tarefa no Todoist por data/hora ao invés de ID"""
+    try:
+        token = obter_client_todoist()
+        if not token:
+            return None
+        
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Buscar todas as tarefas do projeto
+        projeto_id = obter_projeto_agendamentos()
+        if not projeto_id:
+            return None
+            
+        # Listar tarefas do projeto
+        response = requests.get(
+            f"https://api.todoist.com/rest/v2/tasks?project_id={projeto_id}",
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            tarefas = response.json()
+            
+            # Procurar pela tarefa que contém nome + horário
+            for tarefa in tarefas:
+                if nome_cliente in tarefa['content'] and horario in tarefa['content']:
+                    print(f"✅ Tarefa encontrada: {tarefa['content']} (ID: {tarefa['id']})")
+                    return tarefa['id']
+            
+            print(f"⚠️ Tarefa não encontrada: {nome_cliente} - {data} {horario}")
+            return None
+        else:
+            print(f"❌ Erro ao buscar tarefas: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Erro ao buscar tarefa: {e}")
+        return None 
     
 # Inicializar banco
 init_config()
