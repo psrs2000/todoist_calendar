@@ -3050,17 +3050,7 @@ def testar_conexao_yahoo():
 def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, data, horario):
     """Cria evento no Yahoo Calendar"""
     st.info(f"🔍 DEBUG: Tentando criar evento Yahoo para {nome_cliente} - {data} {horario}")
-
-    email_yahoo = obter_configuracao("yahoo_email", "")
-    senha_app = obter_configuracao("yahoo_token", "")
-
-    st.info(f"🔍 DEBUG: Email configurado: {email_yahoo}")
-    st.info(f"🔍 DEBUG: Senha configurada: {'***' if senha_app else 'VAZIA'}")
-
-    if not email_yahoo or not senha_app:
-        st.error("❌ DEBUG: Email ou senha não configurados!")
-        return False
-
+    
     try:
         import requests
         from requests.auth import HTTPBasicAuth
@@ -3070,7 +3060,11 @@ def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, da
         email_yahoo = obter_configuracao("yahoo_email", "")
         senha_app = obter_configuracao("yahoo_token", "")
         
+        st.info(f"🔍 DEBUG: Email configurado: {email_yahoo}")
+        st.info(f"🔍 DEBUG: Senha configurada: {'***' if senha_app else 'VAZIA'}")
+        
         if not email_yahoo or not senha_app:
+            st.error("❌ DEBUG: Email ou senha não configurados!")
             return False
         
         # Dados do profissional
@@ -3086,49 +3080,47 @@ def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, da
         duracao_minutos = obter_configuracao("intervalo_consultas", 60)
         fim = inicio + timedelta(minutes=duracao_minutos)
         
-        # Gerar UID único para o evento
+        # Gerar UID único para o evento (SIMPLIFICADO)
         uid = f"agendamento-{agendamento_id}-{data.replace('-', '')}-{horario.replace(':', '')}"
         
-        # Criar conteúdo do evento (formato iCalendar)
+        # Criar conteúdo do evento (formato iCalendar SIMPLIFICADO)
         ical_content = f"""BEGIN:VCALENDAR
-        VERSION:2.0
-        PRODID:-//tdscalendar//Agendamento//PT
-        BEGIN:VEVENT
-        UID:{uid}
-        DTSTART:{inicio.strftime('%Y%m%dT%H%M%S')}
-        DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
-        SUMMARY:{nome_cliente} - Consulta
-        DESCRIPTION:Cliente: {nome_cliente}\\nTelefone: {telefone}\\nEmail: {email_cliente}\\nProfissional: {nome_profissional}\\nClínica: {nome_clinica}
-        LOCATION:{nome_clinica}
-        END:VEVENT
-        END:VCALENDAR"""
+VERSION:2.0
+PRODID:-//tdscalendar//NONSGML//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:{uid}
+DTSTART:{inicio.strftime('%Y%m%dT%H%M%S')}
+DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
+SUMMARY:{nome_cliente} - Consulta
+DESCRIPTION:Cliente: {nome_cliente}
+CREATED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
+LAST-MODIFIED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR"""
         
-        # URL do calendário
+        # URL do calendário (CORRIGIDA)
         username = email_yahoo.split('@')[0]
         url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
+        
+        st.info(f"🔍 DEBUG: URL sendo usada: {url}")
         
         # Enviar evento
         response = requests.put(
             url,
             auth=HTTPBasicAuth(email_yahoo, senha_app),
             headers={
-                "Content-Type": "text/calendar",
-               
+                "Content-Type": "text/calendar; charset=utf-8",
+                "User-Agent": "tdscalendar/1.0"
             },
             data=ical_content.encode('utf-8'),
             timeout=15
         )
-
-        # ADICIONAR AQUI:
+        
         st.info(f"🔍 DEBUG: Response status: {response.status_code}")
-        st.info(f"🔍 DEBUG: Response text: {response.text[:200]}...")  # Primeiros 200 chars
-
-        if response.status_code in [201, 204]:
-            st.success(f"✅ Evento Yahoo criado com sucesso: {nome_cliente}")
-            # resto...
-        else:
-            st.error(f"❌ DEBUG: Erro na criação - Status: {response.status_code}")
-            return False
+        st.info(f"🔍 DEBUG: Response text: {response.text[:200]}...")
         
         if response.status_code in [201, 204]:
             st.success(f"✅ Evento Yahoo criado com sucesso: {nome_cliente}")
@@ -3137,10 +3129,11 @@ def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, da
             salvar_configuracao(f"yahoo_event_{agendamento_id}", uid)
             return True
         else:
-            print(f"❌ Erro ao criar evento Yahoo: {response.status_code} - {response.text}")
+            st.error(f"❌ DEBUG: Erro na criação - Status: {response.status_code}")
             return False
             
     except Exception as e:
+        st.error(f"❌ DEBUG: Exceção: {str(e)}")
         print(f"❌ Erro ao criar evento Yahoo: {e}")
         return False
 
