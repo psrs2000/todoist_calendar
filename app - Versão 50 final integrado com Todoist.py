@@ -3091,24 +3091,24 @@ def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, da
         
         # Criar conteúdo do evento (formato iCalendar)
         ical_content = f"""BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//tdscalendar//Agendamento//PT
-BEGIN:VEVENT
-UID:{uid}
-DTSTART:{inicio.strftime('%Y%m%dT%H%M%S')}
-DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
-SUMMARY:{nome_cliente} - Consulta
-DESCRIPTION:Cliente: {nome_cliente}\\nTelefone: {telefone}\\nEmail: {email_cliente}\\nProfissional: {nome_profissional}\\nClínica: {nome_clinica}
-LOCATION:{nome_clinica}
-END:VEVENT
-END:VCALENDAR"""
+        VERSION:2.0
+        PRODID:-//tdscalendar//Agendamento//PT
+        BEGIN:VEVENT
+        UID:{uid}
+        DTSTART:{inicio.strftime('%Y%m%dT%H%M%S')}
+        DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
+        SUMMARY:{nome_cliente} - Consulta
+        DESCRIPTION:Cliente: {nome_cliente}\\nTelefone: {telefone}\\nEmail: {email_cliente}\\nProfissional: {nome_profissional}\\nClínica: {nome_clinica}
+        LOCATION:{nome_clinica}
+        END:VEVENT
+        END:VCALENDAR"""
         
         # URL do calendário
         username = email_yahoo.split('@')[0]
         url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
         
         # Enviar evento
-        response = requests.post(
+        response = requests.put(
             url,
             auth=HTTPBasicAuth(email_yahoo, senha_app),
             headers={
