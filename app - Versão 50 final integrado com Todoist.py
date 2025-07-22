@@ -1589,6 +1589,19 @@ def backup_configuracoes_github():
             backup_data['bloqueios_horarios'] = obter_bloqueios_horarios()
         except:
             backup_data['bloqueios_horarios'] = []
+
+        # 8. Buscar CONFIGURAÇÕES YAHOO CALENDAR
+        try:
+            yahoo_configs = {}
+            for chave in ['yahoo_ativo', 'yahoo_email', 'yahoo_token']:
+                valor = obter_configuracao(chave, "")
+                if valor:  # Só adiciona se não estiver vazio
+                    yahoo_configs[chave] = valor
+            
+            if yahoo_configs:
+                backup_data['yahoo_configuracoes'] = yahoo_configs
+        except:
+            backup_data['yahoo_configuracoes'] = {}
         
         conn.close()
         
@@ -1604,6 +1617,7 @@ def backup_configuracoes_github():
             'bloqueios_permanentes', 
             'bloqueios_semanais',
             'bloqueios_horarios'
+            'yahoo_configuracoes'
         ]
         
         # Converter para JSON bonito
@@ -1854,11 +1868,25 @@ def restaurar_configuracoes_github():
                     print(f"✅ {len(backup_data['bloqueios_horarios'])} bloqueios de horários restaurados")
                 except Exception as e:
                     print(f"⚠️ Erro ao restaurar bloqueios de horários: {e}")
+
+            # 8. RESTAURAR CONFIGURAÇÕES YAHOO CALENDAR
+            if 'yahoo_configuracoes' in backup_data:
+                try:
+                    yahoo_configs = backup_data['yahoo_configuracoes']
+                    
+                    for chave, valor in yahoo_configs.items():
+                        c.execute("INSERT OR REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)", 
+                                 (chave, valor))
+                        restaurados += 1
+                    
+                    print(f"✅ {len(yahoo_configs)} configurações Yahoo restauradas")
+                except Exception as e:
+                    print(f"⚠️ Erro ao restaurar configurações Yahoo: {e}")
             
             conn.commit()
             
             print(f"🎉 RESTAURAÇÃO COMPLETA FINALIZADA!")
-            print(f"📊 Total de itens processados: {restaurados + len(backup_data.get('dias_uteis', []))}")
+            print(f"📊 Total incluindo Yahoo: {restaurados + len(backup_data.get('dias_uteis', []))}")
             
             return True
             
@@ -3021,6 +3049,7 @@ def testar_conexao_yahoo():
 
 def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, data, horario):
     """Cria evento no Yahoo Calendar"""
+    st.info(f"🔍 DEBUG: Tentando criar evento Yahoo para {nome_cliente} - {data} {horario}")
     try:
         import requests
         from requests.auth import HTTPBasicAuth
@@ -3079,6 +3108,7 @@ END:VCALENDAR"""
         )
         
         if response.status_code in [201, 204]:
+            st.success(f"✅ Evento Yahoo criado com sucesso: {nome_cliente}")
             print(f"✅ Evento Yahoo criado: {nome_cliente} - {data} {horario}")
             # Salvar UID para poder deletar depois
             salvar_configuracao(f"yahoo_event_{agendamento_id}", uid)
