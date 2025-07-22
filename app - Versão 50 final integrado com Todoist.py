@@ -3101,9 +3101,17 @@ STATUS:CONFIRMED
 END:VEVENT
 END:VCALENDAR"""
         
-        # URL do calendário (CORRIGIDA)
-        username = email_yahoo.split('@')[0]
-        url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
+        # URL do calendário - USAR URL PERSONALIZADA SE TIVER
+        calendar_url = obter_configuracao("yahoo_calendar_url", "")
+        if calendar_url:
+            # Usar URL fornecida pelo usuário (mais confiável)
+            url = calendar_url
+            st.info(f"🔍 DEBUG: Usando URL personalizada: {url}")
+        else:
+            # Fallback para método CalDAV
+            username = email_yahoo.split('@')[0]
+            url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
+            st.info(f"🔍 DEBUG: Usando URL CalDAV: {url}")
         
         st.info(f"🔍 DEBUG: URL sendo usada: {url}")
         
@@ -5239,7 +5247,12 @@ Sistema de Agendamento Online
                         placeholder="Senha de app do tdscalendar",
                         help="Senha de app gerada para tdscalendar"
                     )
-
+                    yahoo_calendar_url = st.text_input(
+                        "URL do Calendário:",
+                        value=obter_configuracao("yahoo_calendar_url", ""),
+                        placeholder="https://calendar.yahoo.com/psrs55/e3223e29.../ycal.ics?id=131",
+                        help="Cole a URL do seu calendário Yahoo (Compartilhar → Para importar)"
+                    )
                 # ADICIONAR ESTA LINHA:
                 yahoo_calendar_name = st.text_input(
                     "Nome do Calendário:",
@@ -5307,6 +5320,7 @@ Sistema de Agendamento Online
                     if yahoo_ativo:
                         salvar_configuracao("yahoo_email", yahoo_email)
                         salvar_configuracao("yahoo_token", yahoo_token)
+                        salvar_configuracao("yahoo_calendar_url", yahoo_calendar_url)
                         salvar_configuracao("yahoo_calendar_name", yahoo_calendar_name)
                     st.success("✅ Configurações do Yahoo Calendar salvas!")
 
