@@ -2928,6 +2928,38 @@ def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
     except Exception as e:
         print(f"❌ Erro ao buscar tarefa: {e}")
         return None 
+
+def testar_conexao_yahoo():
+    """Testa conexão com Yahoo Calendar"""
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        
+        # Configurações
+        email_yahoo = obter_configuracao("yahoo_email", "")
+        senha_app = obter_configuracao("yahoo_token", "")
+        
+        if not email_yahoo or not senha_app:
+            return False, "Email ou senha não configurados"
+        
+        # URL de teste (listar calendários)
+        url = f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/Calendar/"
+        
+        response = requests.request(
+            "PROPFIND",
+            url,
+            auth=HTTPBasicAuth(email_yahoo, senha_app),
+            headers={"Content-Type": "application/xml"},
+            timeout=10
+        )
+        
+        if response.status_code == 207:
+            return True, "✅ Conectado com sucesso!"
+        else:
+            return False, f"❌ Erro: {response.status_code}"
+            
+    except Exception as e:
+        return False, f"❌ Erro: {str(e)}"
     
 # Inicializar banco
 init_config()
@@ -4853,18 +4885,47 @@ Sistema de Agendamento Online
                 if yahoo_ativo:
                     st.success("✅ Integração com Yahoo Calendar ativada")
                     
-                    yahoo_token = st.text_input(
-                        "Token do Yahoo Calendar:",
-                        value=obter_configuracao("yahoo_token", ""),
-                        type="password",
-                        placeholder="Token do Yahoo Calendar API",
-                        help="Token de acesso ao Yahoo Calendar"
-                    )
+                    # Configurações em colunas
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        yahoo_email = st.text_input(
+                            "Email do Yahoo:",
+                            value=obter_configuracao("yahoo_email", ""),
+                            placeholder="seu@yahoo.com",
+                            help="Seu email do Yahoo Calendar"
+                        )
+                    
+                    with col2:
+                        yahoo_token = st.text_input(
+                            "Senha de App:",
+                            value=obter_configuracao("yahoo_token", ""),
+                            type="password",
+                            placeholder="Senha de app do tdscalendar",
+                            help="Senha de app gerada para tdscalendar"
+                        )
+                    
+                    # Teste de conexão
+                    if st.button("🧪 Testar Conexão Yahoo", type="secondary"):
+                        if yahoo_email and yahoo_token:
+                            salvar_configuracao("yahoo_email", yahoo_email)
+                            salvar_configuracao("yahoo_token", yahoo_token)
+                            
+                            with st.spinner("Testando conexão..."):
+                                sucesso, mensagem = testar_conexao_yahoo()
+                                
+                            if sucesso:
+                                st.success(mensagem)
+                            else:
+                                st.error(mensagem)
+                        else:
+                            st.warning("⚠️ Preencha email e senha primeiro")
                     
                     # Botão para salvar
                     if st.button("💾 Salvar Configurações Yahoo", type="primary"):
                         salvar_configuracao("yahoo_ativo", yahoo_ativo)
                         if yahoo_ativo:
+                            salvar_configuracao("yahoo_email", yahoo_email)
                             salvar_configuracao("yahoo_token", yahoo_token)
                         st.success("✅ Configurações do Yahoo Calendar salvas!")
 
