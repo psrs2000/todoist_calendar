@@ -3104,7 +3104,8 @@ END:VEVENT
 END:VCALENDAR"""
         
         # URL do calendário
-        url = f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/Calendar/Calendar/{uid}.ics"
+        username = email_yahoo.split('@')[0]
+        url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
         
         # Enviar evento
         response = requests.put(
@@ -3162,8 +3163,9 @@ def deletar_evento_yahoo(agendamento_id):
             print(f"⚠️ UID do evento Yahoo não encontrado para agendamento {agendamento_id}")
             return False
         
-        # URL do evento específico
-        url = f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/Calendar/Calendar/{uid}.ics"
+            # URL do evento específico
+            username = email_yahoo.split('@')[0]
+            url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
         
         # Deletar evento
         response = requests.delete(
