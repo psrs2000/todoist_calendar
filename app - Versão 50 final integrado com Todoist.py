@@ -3108,7 +3108,7 @@ END:VCALENDAR"""
         url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
         
         # Enviar evento
-        response = requests.put(
+        response = requests.post(
             url,
             auth=HTTPBasicAuth(email_yahoo, senha_app),
             headers={
