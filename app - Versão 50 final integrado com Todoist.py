@@ -3050,6 +3050,17 @@ def testar_conexao_yahoo():
 def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, data, horario):
     """Cria evento no Yahoo Calendar"""
     st.info(f"🔍 DEBUG: Tentando criar evento Yahoo para {nome_cliente} - {data} {horario}")
+
+    email_yahoo = obter_configuracao("yahoo_email", "")
+    senha_app = obter_configuracao("yahoo_token", "")
+
+    st.info(f"🔍 DEBUG: Email configurado: {email_yahoo}")
+    st.info(f"🔍 DEBUG: Senha configurada: {'***' if senha_app else 'VAZIA'}")
+
+    if not email_yahoo or not senha_app:
+        st.error("❌ DEBUG: Email ou senha não configurados!")
+        return False
+
     try:
         import requests
         from requests.auth import HTTPBasicAuth
