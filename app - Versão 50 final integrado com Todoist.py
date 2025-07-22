@@ -5047,6 +5047,28 @@ Sistema de Agendamento Online
                         else:
                             st.warning("⚠️ Digite um nome para o projeto")
 
+
+                
+                # Salvar configurações
+                st.markdown("---")
+                if st.button("💾 Salvar Configurações Todoist", type="primary", use_container_width=True):
+                    salvar_configuracao("todoist_ativo", todoist_ativo)
+                    if todoist_ativo:
+                        salvar_configuracao("todoist_token", todoist_token)
+                        salvar_configuracao("todoist_incluir_pendentes", criar_para_pendentes)
+                        salvar_configuracao("todoist_marcar_concluido", marcar_concluido)
+                        salvar_configuracao("todoist_remover_cancelados", remover_cancelados)
+                        salvar_configuracao("todoist_nome_projeto", nome_projeto_config.strip() if nome_projeto_config.strip() else "📅 Agendamentos")                    
+                    st.success("✅ Configurações do Todoist salvas!")
+                    
+                    if todoist_ativo and todoist_token:
+                        st.info("🎯 **Todoist configurado!** Novos agendamentos criarão tarefas automaticamente.")
+                    
+                    st.rerun()
+            
+            else:
+                st.info("💡 A integração com Todoist transforma cada agendamento em uma tarefa na sua lista de afazeres")
+
                 # ========================================
                 # SEÇÃO YAHOO CALENDAR (NOVO!)
                 # ========================================
@@ -5109,26 +5131,6 @@ Sistema de Agendamento Online
 
                 else:
                     st.info("💡 A integração com Yahoo Calendar transforma cada agendamento em um evento no seu calendário")
-                
-                # Salvar configurações
-                st.markdown("---")
-                if st.button("💾 Salvar Configurações Todoist", type="primary", use_container_width=True):
-                    salvar_configuracao("todoist_ativo", todoist_ativo)
-                    if todoist_ativo:
-                        salvar_configuracao("todoist_token", todoist_token)
-                        salvar_configuracao("todoist_incluir_pendentes", criar_para_pendentes)
-                        salvar_configuracao("todoist_marcar_concluido", marcar_concluido)
-                        salvar_configuracao("todoist_remover_cancelados", remover_cancelados)
-                        salvar_configuracao("todoist_nome_projeto", nome_projeto_config.strip() if nome_projeto_config.strip() else "📅 Agendamentos")                    
-                    st.success("✅ Configurações do Todoist salvas!")
-                    
-                    if todoist_ativo and todoist_token:
-                        st.info("🎯 **Todoist configurado!** Novos agendamentos criarão tarefas automaticamente.")
-                    
-                    st.rerun()
-            
-            else:
-                st.info("💡 A integração com Todoist transforma cada agendamento em uma tarefa na sua lista de afazeres")
                 
                 # Benefícios
                 col1, col2 = st.columns(2)
