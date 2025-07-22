@@ -5069,68 +5069,68 @@ Sistema de Agendamento Online
             else:
                 st.info("💡 A integração com Todoist transforma cada agendamento em uma tarefa na sua lista de afazeres")
 
-                # ========================================
-                # SEÇÃO YAHOO CALENDAR (NOVO!)
-                # ========================================
+            # ========================================
+            # SEÇÃO YAHOO CALENDAR (NOVO!)
+            # ========================================
 
-                st.markdown("---")
-                st.subheader("📅 Integração com Yahoo Calendar")
+            st.markdown("---")
+            st.subheader("📅 Integração com Yahoo Calendar")
 
-                yahoo_ativo = st.checkbox(
-                    "Ativar sincronização com Yahoo Calendar",
-                    value=obter_configuracao("yahoo_ativo", False),
-                    help="Cria eventos automaticamente no Yahoo Calendar para cada agendamento"
-                )
+            yahoo_ativo = st.checkbox(
+                "Ativar sincronização com Yahoo Calendar",
+                value=obter_configuracao("yahoo_ativo", False),
+                help="Cria eventos automaticamente no Yahoo Calendar para cada agendamento"
+            )
 
-                if yahoo_ativo:
-                    st.success("✅ Integração com Yahoo Calendar ativada")
-                    
-                    # Configurações em colunas
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        yahoo_email = st.text_input(
-                            "Email do Yahoo:",
-                            value=obter_configuracao("yahoo_email", ""),
-                            placeholder="seu@yahoo.com",
-                            help="Seu email do Yahoo Calendar"
-                        )
-                    
-                    with col2:
-                        yahoo_token = st.text_input(
-                            "Senha de App:",
-                            value=obter_configuracao("yahoo_token", ""),
-                            type="password",
-                            placeholder="Senha de app do tdscalendar",
-                            help="Senha de app gerada para tdscalendar"
-                        )
-                    
-                    # Teste de conexão
-                    if st.button("🧪 Testar Conexão Yahoo", type="secondary"):
-                        if yahoo_email and yahoo_token:
-                            salvar_configuracao("yahoo_email", yahoo_email)
-                            salvar_configuracao("yahoo_token", yahoo_token)
+            if yahoo_ativo:
+                st.success("✅ Integração com Yahoo Calendar ativada")
+                
+                # Configurações em colunas
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    yahoo_email = st.text_input(
+                        "Email do Yahoo:",
+                        value=obter_configuracao("yahoo_email", ""),
+                        placeholder="seu@yahoo.com",
+                        help="Seu email do Yahoo Calendar"
+                    )
+                
+                with col2:
+                    yahoo_token = st.text_input(
+                        "Senha de App:",
+                        value=obter_configuracao("yahoo_token", ""),
+                        type="password",
+                        placeholder="Senha de app do tdscalendar",
+                        help="Senha de app gerada para tdscalendar"
+                    )
+                
+                # Teste de conexão
+                if st.button("🧪 Testar Conexão Yahoo", type="secondary"):
+                    if yahoo_email and yahoo_token:
+                        salvar_configuracao("yahoo_email", yahoo_email)
+                        salvar_configuracao("yahoo_token", yahoo_token)
+                        
+                        with st.spinner("Testando conexão..."):
+                            sucesso, mensagem = testar_conexao_yahoo()
                             
-                            with st.spinner("Testando conexão..."):
-                                sucesso, mensagem = testar_conexao_yahoo()
-                                
-                            if sucesso:
-                                st.success(mensagem)
-                            else:
-                                st.error(mensagem)
+                        if sucesso:
+                            st.success(mensagem)
                         else:
-                            st.warning("⚠️ Preencha email e senha primeiro")
-                    
-                    # Botão para salvar
-                    if st.button("💾 Salvar Configurações Yahoo", type="primary"):
-                        salvar_configuracao("yahoo_ativo", yahoo_ativo)
-                        if yahoo_ativo:
-                            salvar_configuracao("yahoo_email", yahoo_email)
-                            salvar_configuracao("yahoo_token", yahoo_token)
-                        st.success("✅ Configurações do Yahoo Calendar salvas!")
+                            st.error(mensagem)
+                    else:
+                        st.warning("⚠️ Preencha email e senha primeiro")
+                
+                # Botão para salvar
+                if st.button("💾 Salvar Configurações Yahoo", type="primary"):
+                    salvar_configuracao("yahoo_ativo", yahoo_ativo)
+                    if yahoo_ativo:
+                        salvar_configuracao("yahoo_email", yahoo_email)
+                        salvar_configuracao("yahoo_token", yahoo_token)
+                    st.success("✅ Configurações do Yahoo Calendar salvas!")
 
-                else:
-                    st.info("💡 A integração com Yahoo Calendar transforma cada agendamento em um evento no seu calendário")
+            else:
+                st.info("💡 A integração com Yahoo Calendar transforma cada agendamento em um evento no seu calendário")
                 
                 # Benefícios
                 col1, col2 = st.columns(2)
