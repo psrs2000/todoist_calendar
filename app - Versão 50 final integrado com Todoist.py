@@ -3192,7 +3192,7 @@ def deletar_evento_yahoo(agendamento_id):
         return False
 
 def descobrir_estrutura_yahoo():
-    """Descobre a estrutura real do Yahoo CalDAV"""
+    """Descobre a estrutura real do Yahoo CalDAV - VERSÃO MÚLTIPLAS URLs"""
     try:
         import requests
         from requests.auth import HTTPBasicAuth
@@ -3201,31 +3201,43 @@ def descobrir_estrutura_yahoo():
         senha_app = obter_configuracao("yahoo_token", "")
         username = email_yahoo.split('@')[0]
         
-        # PROPFIND no nível raiz para descobrir estrutura
-        propfind_xml = """<?xml version="1.0" encoding="utf-8" ?>
-<D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-  <D:prop>
-    <D:displayname />
-    <D:resourcetype />
-    <C:calendar-description />
-  </D:prop>
-</D:propfind>"""
+        # TENTAR DIFERENTES URLs BASE
+        urls_base = [
+            f"https://caldav.calendar.yahoo.com/dav/{username}/",
+            f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/",
+            f"https://caldav.calendar.yahoo.com/{username}/",
+            f"https://caldav.calendar.yahoo.com/{email_yahoo}/",
+            f"https://calendar.yahoo.com/dav/{username}/",
+            f"https://calendar.yahoo.com/dav/{email_yahoo}/",
+            "https://caldav.calendar.yahoo.com/",
+            "https://caldav.calendar.yahoo.com/dav/"
+        ]
         
-        url = f"https://caldav.calendar.yahoo.com/dav/{username}/"
+        resultados = []
         
-        response = requests.request(
-            "PROPFIND",
-            url,
-            auth=HTTPBasicAuth(email_yahoo, senha_app),
-            headers={
-                "Content-Type": "application/xml",
-                "Depth": "1"
-            },
-            data=propfind_xml,
-            timeout=15
-        )
+        for url in urls_base:
+            try:
+                response = requests.request(
+                    "PROPFIND",
+                    url,
+                    auth=HTTPBasicAuth(email_yahoo, senha_app),
+                    headers={
+                        "Content-Type": "application/xml",
+                        "Depth": "1"
+                    },
+                    timeout=10
+                )
+                
+                resultados.append(f"URL: {url} → Status: {response.status_code}")
+                
+                if response.status_code in [200, 207]:
+                    resultados.append(f"✅ SUCESSO! Resposta: {response.text[:500]}...")
+                    return response.status_code, "\n".join(resultados) + f"\n\nRESPOSTA COMPLETA:\n{response.text}"
+                    
+            except Exception as e:
+                resultados.append(f"URL: {url} → ERRO: {str(e)}")
         
-        return response.status_code, response.text
+        return 404, "\n".join(resultados)
         
     except Exception as e:
         return 0, str(e)
