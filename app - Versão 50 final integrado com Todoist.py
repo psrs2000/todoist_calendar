@@ -3087,7 +3087,7 @@ def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, da
         fim = inicio + timedelta(minutes=duracao_minutos)
         
         # Gerar UID único para o evento
-        uid = f"agendamento_{agendamento_id}_{data}_{horario.replace(':', '')}@tdscalendar"
+        uid = f"agendamento-{agendamento_id}-{data.replace('-', '')}-{horario.replace(':', '')}"
         
         # Criar conteúdo do evento (formato iCalendar)
         ical_content = f"""BEGIN:VCALENDAR
@@ -3113,7 +3113,7 @@ END:VCALENDAR"""
             auth=HTTPBasicAuth(email_yahoo, senha_app),
             headers={
                 "Content-Type": "text/calendar",
-                "If-None-Match": "*"
+               
             },
             data=ical_content.encode('utf-8'),
             timeout=15
