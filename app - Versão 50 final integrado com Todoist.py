@@ -5139,7 +5139,7 @@ Sistema de Agendamento Online
                 
                 # Configurações em colunas
                 col1, col2 = st.columns(2)
-                
+
                 with col1:
                     yahoo_email = st.text_input(
                         "Email do Yahoo:",
@@ -5147,7 +5147,7 @@ Sistema de Agendamento Online
                         placeholder="seu@yahoo.com",
                         help="Seu email do Yahoo Calendar"
                     )
-                
+
                 with col2:
                     yahoo_token = st.text_input(
                         "Senha de App:",
@@ -5156,6 +5156,14 @@ Sistema de Agendamento Online
                         placeholder="Senha de app do tdscalendar",
                         help="Senha de app gerada para tdscalendar"
                     )
+
+                # ADICIONAR ESTA LINHA:
+                yahoo_calendar_name = st.text_input(
+                    "Nome do Calendário:",
+                    value=obter_configuracao("yahoo_calendar_name", "Calendar"),
+                    placeholder="Minha_Agenda",
+                    help="Nome exato do seu calendário no Yahoo (encontre em 'Editar Calendário')"
+                )
                 
                 # Teste de conexão
                 if st.button("🧪 Testar Conexão Yahoo", type="secondary"):
@@ -5179,6 +5187,7 @@ Sistema de Agendamento Online
                     if yahoo_ativo:
                         salvar_configuracao("yahoo_email", yahoo_email)
                         salvar_configuracao("yahoo_token", yahoo_token)
+                        salvar_configuracao("yahoo_calendar_name", yahoo_calendar_name)
                     st.success("✅ Configurações do Yahoo Calendar salvas!")
 
             else:
