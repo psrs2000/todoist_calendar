@@ -5161,7 +5161,7 @@ Sistema de Agendamento Online
                 yahoo_calendar_name = st.text_input(
                     "Nome do Calendário:",
                     value=obter_configuracao("yahoo_calendar_name", "Calendar"),
-                    placeholder="Minha_Agenda",
+                    placeholder="Ex: Calendar, Personal, etc.",
                     help="Nome exato do seu calendário no Yahoo (encontre em 'Editar Calendário')"
                 )
                 
