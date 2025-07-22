@@ -544,6 +544,20 @@ def adicionar_agendamento(nome, telefone, email, data, horario):
             except Exception as e:
                 print(f"❌ Erro na integração Todoist: {e}")
     
+    # INTEGRAÇÃO YAHOO CALENDAR
+    yahoo_ativo = obter_configuracao("yahoo_ativo", False)
+
+    if yahoo_ativo and agendamento_id and status_inicial == "confirmado":
+        # SÓ CRIA SE FOR CONFIRMADO!
+        try:
+            sucesso = criar_evento_yahoo(agendamento_id, nome, telefone, email, data, horario)
+            if sucesso:
+                print(f"📅 Evento Yahoo criado: {nome} - {data} {horario}")
+            else:
+                print(f"⚠️ Falha ao criar evento Yahoo: {nome}")
+        except Exception as e:
+            print(f"❌ Erro na integração Yahoo: {e}")    
+    
     backup_agendamentos_futuros_github()
     return status_inicial
 
@@ -607,6 +621,24 @@ def cancelar_agendamento(nome, telefone, data):
                         print(f"❌ Erro ao remover tarefa Todoist {horario}: {e}")
                 
                 print(f"📝 Todoist: {eventos_deletados}/{len(agendamentos_do_dia)} tarefas removidas")
+  
+            # INTEGRAÇÃO YAHOO CALENDAR - REMOVER EVENTOS CANCELADOS
+            yahoo_ativo = obter_configuracao("yahoo_ativo", False)
+
+            if yahoo_ativo:
+                eventos_yahoo_removidos = 0
+                for agendamento in agendamentos_do_dia:
+                    agendamento_id = agendamento[0]
+                    
+                    try:
+                        sucesso = deletar_evento_yahoo(agendamento_id)
+                        if sucesso:
+                            eventos_yahoo_removidos += 1
+                            print(f"📅 Evento Yahoo removido: {agendamento_id}")
+                    except Exception as e:
+                        print(f"❌ Erro ao remover evento Yahoo: {e}")
+                
+                print(f"📅 Yahoo: {eventos_yahoo_removidos}/{len(agendamentos_do_dia)} eventos removidos")  
             
             # Enviar email de cancelamento (código original mantido)
             envio_automatico = obter_configuracao("envio_automatico", False)
@@ -818,6 +850,19 @@ def atualizar_status_agendamento(agendamento_id, novo_status):
                 
         except Exception as e:
             print(f"❌ Erro na integração Todoist: {e}")
+
+    # INTEGRAÇÃO YAHOO CALENDAR - STATUS CANCELADO
+    yahoo_ativo = obter_configuracao("yahoo_ativo", False)
+
+    if novo_status == 'cancelado' and yahoo_ativo:
+        try:
+            sucesso = deletar_evento_yahoo(agendamento_id)
+            if sucesso:
+                print(f"📅 Evento Yahoo removido por cancelamento: {agendamento_id}")
+            else:
+                print(f"⚠️ Evento Yahoo não encontrado para remover: {agendamento_id}")
+        except Exception as e:
+            print(f"❌ Erro ao remover evento Yahoo: {e}")
     
     # Envio de emails (código original mantido)
     envio_automatico = obter_configuracao("envio_automatico", False)
@@ -850,6 +895,19 @@ def deletar_agendamento(agendamento_id):
     c.execute("DELETE FROM agendamentos WHERE id=?", (agendamento_id,))
     conn.commit()
     conn.close()
+
+    # INTEGRAÇÃO YAHOO CALENDAR - EXCLUSÃO DIRETA
+    yahoo_ativo = obter_configuracao("yahoo_ativo", False)
+    if yahoo_ativo:
+        try:
+            sucesso = deletar_evento_yahoo(agendamento_id)
+            if sucesso:
+                print(f"📅 Evento Yahoo removido por exclusão: {agendamento_id}")
+        except Exception as e:
+            print(f"❌ Erro ao remover evento Yahoo: {e}")
+    
+    backup_agendamentos_futuros_github()
+
     backup_agendamentos_futuros_github()
 
 def adicionar_bloqueio_horario(data, horario):
@@ -2960,6 +3018,126 @@ def testar_conexao_yahoo():
             
     except Exception as e:
         return False, f"❌ Erro: {str(e)}"
+
+def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, data, horario):
+    """Cria evento no Yahoo Calendar"""
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        from datetime import datetime, timedelta
+        
+        # Configurações
+        email_yahoo = obter_configuracao("yahoo_email", "")
+        senha_app = obter_configuracao("yahoo_token", "")
+        
+        if not email_yahoo or not senha_app:
+            return False
+        
+        # Dados do profissional
+        nome_profissional = obter_configuracao("nome_profissional", "Dr. João Silva")
+        nome_clinica = obter_configuracao("nome_clinica", "Clínica São Lucas")
+        
+        # Preparar data/hora do evento
+        data_obj = datetime.strptime(data, "%Y-%m-%d")
+        horario_obj = datetime.strptime(horario, "%H:%M").time()
+        inicio = datetime.combine(data_obj.date(), horario_obj)
+        
+        # Duração do evento (1 hora por padrão)
+        duracao_minutos = obter_configuracao("intervalo_consultas", 60)
+        fim = inicio + timedelta(minutes=duracao_minutos)
+        
+        # Gerar UID único para o evento
+        uid = f"agendamento_{agendamento_id}_{data}_{horario.replace(':', '')}@tdscalendar"
+        
+        # Criar conteúdo do evento (formato iCalendar)
+        ical_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//tdscalendar//Agendamento//PT
+BEGIN:VEVENT
+UID:{uid}
+DTSTART:{inicio.strftime('%Y%m%dT%H%M%S')}
+DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
+SUMMARY:{nome_cliente} - Consulta
+DESCRIPTION:Cliente: {nome_cliente}\\nTelefone: {telefone}\\nEmail: {email_cliente}\\nProfissional: {nome_profissional}\\nClínica: {nome_clinica}
+LOCATION:{nome_clinica}
+END:VEVENT
+END:VCALENDAR"""
+        
+        # URL do calendário
+        url = f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/Calendar/Calendar/{uid}.ics"
+        
+        # Enviar evento
+        response = requests.put(
+            url,
+            auth=HTTPBasicAuth(email_yahoo, senha_app),
+            headers={
+                "Content-Type": "text/calendar",
+                "If-None-Match": "*"
+            },
+            data=ical_content.encode('utf-8'),
+            timeout=15
+        )
+        
+        if response.status_code in [201, 204]:
+            print(f"✅ Evento Yahoo criado: {nome_cliente} - {data} {horario}")
+            # Salvar UID para poder deletar depois
+            salvar_configuracao(f"yahoo_event_{agendamento_id}", uid)
+            return True
+        else:
+            print(f"❌ Erro ao criar evento Yahoo: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erro ao criar evento Yahoo: {e}")
+        return False
+
+def deletar_evento_yahoo(agendamento_id):
+    """Deleta evento do Yahoo Calendar"""
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        
+        # Configurações
+        email_yahoo = obter_configuracao("yahoo_email", "")
+        senha_app = obter_configuracao("yahoo_token", "")
+        
+        if not email_yahoo or not senha_app:
+            return False
+        
+        # Buscar UID do evento salvo
+        uid = obter_configuracao(f"yahoo_event_{agendamento_id}", "")
+        if not uid:
+            print(f"⚠️ UID do evento Yahoo não encontrado para agendamento {agendamento_id}")
+            return False
+        
+        # URL do evento específico
+        url = f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/Calendar/Calendar/{uid}.ics"
+        
+        # Deletar evento
+        response = requests.delete(
+            url,
+            auth=HTTPBasicAuth(email_yahoo, senha_app),
+            timeout=15
+        )
+        
+        if response.status_code in [200, 204, 404]:  # 404 = já foi deletado
+            print(f"✅ Evento Yahoo deletado: ID {agendamento_id}")
+            
+            # Remover UID salvo
+            conn = conectar()
+            c = conn.cursor()
+            c.execute("DELETE FROM configuracoes WHERE chave = ?", (f"yahoo_event_{agendamento_id}",))
+            conn.commit()
+            conn.close()
+            
+            return True
+        else:
+            print(f"❌ Erro ao deletar evento Yahoo: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erro ao deletar evento Yahoo: {e}")
+        return False
     
 # Inicializar banco
 init_config()
