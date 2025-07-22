@@ -544,20 +544,6 @@ def adicionar_agendamento(nome, telefone, email, data, horario):
             except Exception as e:
                 print(f"❌ Erro na integração Todoist: {e}")
     
-    # INTEGRAÇÃO YAHOO CALENDAR
-    yahoo_ativo = obter_configuracao("yahoo_ativo", False)
-
-    if yahoo_ativo and agendamento_id and status_inicial == "confirmado":
-        # SÓ CRIA SE FOR CONFIRMADO!
-        try:
-            sucesso = criar_evento_yahoo(agendamento_id, nome, telefone, email, data, horario)
-            if sucesso:
-                print(f"📅 Evento Yahoo criado: {nome} - {data} {horario}")
-            else:
-                print(f"⚠️ Falha ao criar evento Yahoo: {nome}")
-        except Exception as e:
-            print(f"❌ Erro na integração Yahoo: {e}")    
-    
     backup_agendamentos_futuros_github()
     return status_inicial
 
@@ -621,24 +607,6 @@ def cancelar_agendamento(nome, telefone, data):
                         print(f"❌ Erro ao remover tarefa Todoist {horario}: {e}")
                 
                 print(f"📝 Todoist: {eventos_deletados}/{len(agendamentos_do_dia)} tarefas removidas")
-  
-            # INTEGRAÇÃO YAHOO CALENDAR - REMOVER EVENTOS CANCELADOS
-            yahoo_ativo = obter_configuracao("yahoo_ativo", False)
-
-            if yahoo_ativo:
-                eventos_yahoo_removidos = 0
-                for agendamento in agendamentos_do_dia:
-                    agendamento_id = agendamento[0]
-                    
-                    try:
-                        sucesso = deletar_evento_yahoo(agendamento_id)
-                        if sucesso:
-                            eventos_yahoo_removidos += 1
-                            print(f"📅 Evento Yahoo removido: {agendamento_id}")
-                    except Exception as e:
-                        print(f"❌ Erro ao remover evento Yahoo: {e}")
-                
-                print(f"📅 Yahoo: {eventos_yahoo_removidos}/{len(agendamentos_do_dia)} eventos removidos")  
             
             # Enviar email de cancelamento (código original mantido)
             envio_automatico = obter_configuracao("envio_automatico", False)
@@ -850,19 +818,6 @@ def atualizar_status_agendamento(agendamento_id, novo_status):
                 
         except Exception as e:
             print(f"❌ Erro na integração Todoist: {e}")
-
-    # INTEGRAÇÃO YAHOO CALENDAR - STATUS CANCELADO
-    yahoo_ativo = obter_configuracao("yahoo_ativo", False)
-
-    if novo_status == 'cancelado' and yahoo_ativo:
-        try:
-            sucesso = deletar_evento_yahoo(agendamento_id)
-            if sucesso:
-                print(f"📅 Evento Yahoo removido por cancelamento: {agendamento_id}")
-            else:
-                print(f"⚠️ Evento Yahoo não encontrado para remover: {agendamento_id}")
-        except Exception as e:
-            print(f"❌ Erro ao remover evento Yahoo: {e}")
     
     # Envio de emails (código original mantido)
     envio_automatico = obter_configuracao("envio_automatico", False)
@@ -895,19 +850,6 @@ def deletar_agendamento(agendamento_id):
     c.execute("DELETE FROM agendamentos WHERE id=?", (agendamento_id,))
     conn.commit()
     conn.close()
-
-    # INTEGRAÇÃO YAHOO CALENDAR - EXCLUSÃO DIRETA
-    yahoo_ativo = obter_configuracao("yahoo_ativo", False)
-    if yahoo_ativo:
-        try:
-            sucesso = deletar_evento_yahoo(agendamento_id)
-            if sucesso:
-                print(f"📅 Evento Yahoo removido por exclusão: {agendamento_id}")
-        except Exception as e:
-            print(f"❌ Erro ao remover evento Yahoo: {e}")
-    
-    backup_agendamentos_futuros_github()
-
     backup_agendamentos_futuros_github()
 
 def adicionar_bloqueio_horario(data, horario):
@@ -1589,19 +1531,6 @@ def backup_configuracoes_github():
             backup_data['bloqueios_horarios'] = obter_bloqueios_horarios()
         except:
             backup_data['bloqueios_horarios'] = []
-
-        # 8. Buscar CONFIGURAÇÕES YAHOO CALENDAR
-        try:
-            yahoo_configs = {}
-            for chave in ['yahoo_ativo', 'yahoo_email', 'yahoo_token']:
-                valor = obter_configuracao(chave, "")
-                if valor:  # Só adiciona se não estiver vazio
-                    yahoo_configs[chave] = valor
-            
-            if yahoo_configs:
-                backup_data['yahoo_configuracoes'] = yahoo_configs
-        except:
-            backup_data['yahoo_configuracoes'] = {}
         
         conn.close()
         
@@ -1617,7 +1546,6 @@ def backup_configuracoes_github():
             'bloqueios_permanentes', 
             'bloqueios_semanais',
             'bloqueios_horarios'
-            'yahoo_configuracoes'
         ]
         
         # Converter para JSON bonito
@@ -1868,25 +1796,11 @@ def restaurar_configuracoes_github():
                     print(f"✅ {len(backup_data['bloqueios_horarios'])} bloqueios de horários restaurados")
                 except Exception as e:
                     print(f"⚠️ Erro ao restaurar bloqueios de horários: {e}")
-
-            # 8. RESTAURAR CONFIGURAÇÕES YAHOO CALENDAR
-            if 'yahoo_configuracoes' in backup_data:
-                try:
-                    yahoo_configs = backup_data['yahoo_configuracoes']
-                    
-                    for chave, valor in yahoo_configs.items():
-                        c.execute("INSERT OR REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)", 
-                                 (chave, valor))
-                        restaurados += 1
-                    
-                    print(f"✅ {len(yahoo_configs)} configurações Yahoo restauradas")
-                except Exception as e:
-                    print(f"⚠️ Erro ao restaurar configurações Yahoo: {e}")
             
             conn.commit()
             
             print(f"🎉 RESTAURAÇÃO COMPLETA FINALIZADA!")
-            print(f"📊 Total incluindo Yahoo: {restaurados + len(backup_data.get('dias_uteis', []))}")
+            print(f"📊 Total de itens processados: {restaurados + len(backup_data.get('dias_uteis', []))}")
             
             return True
             
@@ -3014,273 +2928,6 @@ def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
     except Exception as e:
         print(f"❌ Erro ao buscar tarefa: {e}")
         return None 
-
-def testar_conexao_yahoo():
-    """Testa conexão com Yahoo Calendar"""
-    try:
-        import requests
-        from requests.auth import HTTPBasicAuth
-        
-        # Configurações
-        email_yahoo = obter_configuracao("yahoo_email", "")
-        senha_app = obter_configuracao("yahoo_token", "")
-        
-        if not email_yahoo or not senha_app:
-            return False, "Email ou senha não configurados"
-        
-        # URL de teste (listar calendários)
-        url = f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/Calendar/"
-        
-        response = requests.request(
-            "PROPFIND",
-            url,
-            auth=HTTPBasicAuth(email_yahoo, senha_app),
-            headers={"Content-Type": "application/xml"},
-            timeout=10
-        )
-        
-        if response.status_code == 207:
-            return True, "✅ Conectado com sucesso!"
-        else:
-            return False, f"❌ Erro: {response.status_code}"
-            
-    except Exception as e:
-        return False, f"❌ Erro: {str(e)}"
-
-def criar_evento_yahoo(agendamento_id, nome_cliente, telefone, email_cliente, data, horario):
-    """Cria evento no Yahoo Calendar"""
-    st.info(f"🔍 DEBUG: Tentando criar evento Yahoo para {nome_cliente} - {data} {horario}")
-    
-    try:
-        import requests
-        from requests.auth import HTTPBasicAuth
-        from datetime import datetime, timedelta
-        
-        # Configurações
-        email_yahoo = obter_configuracao("yahoo_email", "")
-        senha_app = obter_configuracao("yahoo_token", "")
-        
-        st.info(f"🔍 DEBUG: Email configurado: {email_yahoo}")
-        st.info(f"🔍 DEBUG: Senha configurada: {'***' if senha_app else 'VAZIA'}")
-        
-        if not email_yahoo or not senha_app:
-            st.error("❌ DEBUG: Email ou senha não configurados!")
-            return False
-        
-        # Dados do profissional
-        nome_profissional = obter_configuracao("nome_profissional", "Dr. João Silva")
-        nome_clinica = obter_configuracao("nome_clinica", "Clínica São Lucas")
-        
-        # Preparar data/hora do evento
-        data_obj = datetime.strptime(data, "%Y-%m-%d")
-        horario_obj = datetime.strptime(horario, "%H:%M").time()
-        inicio = datetime.combine(data_obj.date(), horario_obj)
-        
-        # Duração do evento (1 hora por padrão)
-        duracao_minutos = obter_configuracao("intervalo_consultas", 60)
-        fim = inicio + timedelta(minutes=duracao_minutos)
-        
-        # Gerar UID único para o evento (SIMPLIFICADO)
-        uid = f"agendamento-{agendamento_id}-{data.replace('-', '')}-{horario.replace(':', '')}"
-        
-        # Criar conteúdo do evento (formato iCalendar SIMPLIFICADO)
-        ical_content = f"""BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//tdscalendar//NONSGML//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:{uid}
-DTSTART:{inicio.strftime('%Y%m%dT%H%M%S')}
-DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
-SUMMARY:{nome_cliente} - Consulta
-DESCRIPTION:Cliente: {nome_cliente}
-CREATED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
-LAST-MODIFIED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR"""
-        
-        # URL do calendário - USAR URL PERSONALIZADA SE TIVER
-        calendar_url = obter_configuracao("yahoo_calendar_url", "")
-        if calendar_url:
-            # Usar URL fornecida pelo usuário (mais confiável)
-            url = calendar_url
-            st.info(f"🔍 DEBUG: Usando URL personalizada: {url}")
-        else:
-            # Fallback para método CalDAV
-            username = email_yahoo.split('@')[0]
-            url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
-            st.info(f"🔍 DEBUG: Usando URL CalDAV: {url}")
-        
-        st.info(f"🔍 DEBUG: URL sendo usada: {url}")
-        
-        # Enviar evento
-        response = requests.put(
-            url,
-            auth=HTTPBasicAuth(email_yahoo, senha_app),
-            headers={
-                "Content-Type": "text/calendar; charset=utf-8",
-                "User-Agent": "tdscalendar/1.0"
-            },
-            data=ical_content.encode('utf-8'),
-            timeout=15
-        )
-        
-        st.info(f"🔍 DEBUG: Response status: {response.status_code}")
-        st.info(f"🔍 DEBUG: Response text: {response.text[:200]}...")
-        
-        if response.status_code in [201, 204]:
-            st.success(f"✅ Evento Yahoo criado com sucesso: {nome_cliente}")
-            print(f"✅ Evento Yahoo criado: {nome_cliente} - {data} {horario}")
-            # Salvar UID para poder deletar depois
-            salvar_configuracao(f"yahoo_event_{agendamento_id}", uid)
-            return True
-        else:
-            st.error(f"❌ DEBUG: Erro na criação - Status: {response.status_code}")
-            return False
-            
-    except Exception as e:
-        st.error(f"❌ DEBUG: Exceção: {str(e)}")
-        print(f"❌ Erro ao criar evento Yahoo: {e}")
-        return False
-
-def deletar_evento_yahoo(agendamento_id):
-    """Deleta evento do Yahoo Calendar"""
-    try:
-        import requests
-        from requests.auth import HTTPBasicAuth
-        
-        # Configurações
-        email_yahoo = obter_configuracao("yahoo_email", "")
-        senha_app = obter_configuracao("yahoo_token", "")
-        
-        if not email_yahoo or not senha_app:
-            return False
-        
-        # Buscar UID do evento salvo
-        uid = obter_configuracao(f"yahoo_event_{agendamento_id}", "")
-        if not uid:
-            print(f"⚠️ UID do evento Yahoo não encontrado para agendamento {agendamento_id}")
-            return False
-        
-            # URL do evento específico
-            username = email_yahoo.split('@')[0]
-            url = f"https://caldav.calendar.yahoo.com/dav/{username}/Calendar/{uid}.ics"
-        
-        # Deletar evento
-        response = requests.delete(
-            url,
-            auth=HTTPBasicAuth(email_yahoo, senha_app),
-            timeout=15
-        )
-        
-        if response.status_code in [200, 204, 404]:  # 404 = já foi deletado
-            print(f"✅ Evento Yahoo deletado: ID {agendamento_id}")
-            
-            # Remover UID salvo
-            conn = conectar()
-            c = conn.cursor()
-            c.execute("DELETE FROM configuracoes WHERE chave = ?", (f"yahoo_event_{agendamento_id}",))
-            conn.commit()
-            conn.close()
-            
-            return True
-        else:
-            print(f"❌ Erro ao deletar evento Yahoo: {response.status_code} - {response.text}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Erro ao deletar evento Yahoo: {e}")
-        return False
-
-def descobrir_estrutura_yahoo():
-    """Descobre a estrutura real do Yahoo CalDAV - VERSÃO MÚLTIPLAS URLs"""
-    try:
-        import requests
-        from requests.auth import HTTPBasicAuth
-        
-        email_yahoo = obter_configuracao("yahoo_email", "")
-        senha_app = obter_configuracao("yahoo_token", "")
-        username = email_yahoo.split('@')[0]
-        
-        # TENTAR DIFERENTES URLs BASE
-        urls_base = [
-            f"https://caldav.calendar.yahoo.com/dav/{username}/",
-            f"https://caldav.calendar.yahoo.com/dav/{email_yahoo}/",
-            f"https://caldav.calendar.yahoo.com/{username}/",
-            f"https://caldav.calendar.yahoo.com/{email_yahoo}/",
-            f"https://calendar.yahoo.com/dav/{username}/",
-            f"https://calendar.yahoo.com/dav/{email_yahoo}/",
-            "https://caldav.calendar.yahoo.com/",
-            "https://caldav.calendar.yahoo.com/dav/"
-        ]
-        
-        resultados = []
-        
-        for url in urls_base:
-            try:
-                response = requests.request(
-                    "PROPFIND",
-                    url,
-                    auth=HTTPBasicAuth(email_yahoo, senha_app),
-                    headers={
-                        "Content-Type": "application/xml",
-                        "Depth": "1"
-                    },
-                    timeout=10
-                )
-                
-                resultados.append(f"URL: {url} → Status: {response.status_code}")
-                
-                if response.status_code in [200, 207]:
-                    resultados.append(f"✅ SUCESSO! Resposta: {response.text[:500]}...")
-                    return response.status_code, "\n".join(resultados) + f"\n\nRESPOSTA COMPLETA:\n{response.text}"
-                    
-            except Exception as e:
-                resultados.append(f"URL: {url} → ERRO: {str(e)}")
-        
-        return 404, "\n".join(resultados)
-        
-    except Exception as e:
-        return 0, str(e)
- 
-def descobrir_calendarios_yahoo():
-    """Descobre os calendários disponíveis do usuário"""
-    try:
-        import requests
-        from requests.auth import HTTPBasicAuth
-        
-        email_yahoo = obter_configuracao("yahoo_email", "")
-        senha_app = obter_configuracao("yahoo_token", "")
-        
-        # URL do usuário descoberta
-        user_url = "https://caldav.calendar.yahoo.com/principals/users/psrs55/"
-        
-        # PROPFIND para descobrir calendários
-        propfind_xml = """<?xml version="1.0" encoding="utf-8" ?>
-<D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-  <D:prop>
-    <C:calendar-home-set />
-  </D:prop>
-</D:propfind>"""
-        
-        response = requests.request(
-            "PROPFIND",
-            user_url,
-            auth=HTTPBasicAuth(email_yahoo, senha_app),
-            headers={
-                "Content-Type": "application/xml",
-                "Depth": "0"
-            },
-            data=propfind_xml,
-            timeout=15
-        )
-        
-        return response.status_code, response.text
-        
-    except Exception as e:
-        return 0, str(e) 
     
 # Inicializar banco
 init_config()
@@ -5189,8 +4836,6 @@ Sistema de Agendamento Online
                             st.rerun()
                         else:
                             st.warning("⚠️ Digite um nome para o projeto")
-
-
                 
                 # Salvar configurações
                 st.markdown("---")
@@ -5211,121 +4856,6 @@ Sistema de Agendamento Online
             
             else:
                 st.info("💡 A integração com Todoist transforma cada agendamento em uma tarefa na sua lista de afazeres")
-
-            # ========================================
-            # SEÇÃO YAHOO CALENDAR (NOVO!)
-            # ========================================
-
-            st.markdown("---")
-            st.subheader("📅 Integração com Yahoo Calendar")
-
-            yahoo_ativo = st.checkbox(
-                "Ativar sincronização com Yahoo Calendar",
-                value=obter_configuracao("yahoo_ativo", False),
-                help="Cria eventos automaticamente no Yahoo Calendar para cada agendamento"
-            )
-
-            if yahoo_ativo:
-                st.success("✅ Integração com Yahoo Calendar ativada")
-                
-                # Configurações em colunas
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    yahoo_email = st.text_input(
-                        "Email do Yahoo:",
-                        value=obter_configuracao("yahoo_email", ""),
-                        placeholder="seu@yahoo.com",
-                        help="Seu email do Yahoo Calendar"
-                    )
-
-                with col2:
-                    yahoo_token = st.text_input(
-                        "Senha de App:",
-                        value=obter_configuracao("yahoo_token", ""),
-                        type="password",
-                        placeholder="Senha de app do tdscalendar",
-                        help="Senha de app gerada para tdscalendar"
-                    )
-                    yahoo_calendar_url = st.text_input(
-                        "URL do Calendário:",
-                        value=obter_configuracao("yahoo_calendar_url", ""),
-                        placeholder="https://calendar.yahoo.com/psrs55/e3223e29.../ycal.ics?id=131",
-                        help="Cole a URL do seu calendário Yahoo (Compartilhar → Para importar)"
-                    )
-                # ADICIONAR ESTA LINHA:
-                yahoo_calendar_name = st.text_input(
-                    "Nome do Calendário:",
-                    value=obter_configuracao("yahoo_calendar_name", "Calendar"),
-                    placeholder="Ex: Calendar, Personal, etc.",
-                    help="Nome exato do seu calendário no Yahoo (encontre em 'Editar Calendário')"
-                )
-                
-                # Teste de conexão
-                if st.button("🧪 Testar Conexão Yahoo", type="secondary"):
-                    if yahoo_email and yahoo_token:
-                        salvar_configuracao("yahoo_email", yahoo_email)
-                        salvar_configuracao("yahoo_token", yahoo_token)
-                        
-                        with st.spinner("Testando conexão..."):
-                            sucesso, mensagem = testar_conexao_yahoo()
-                            
-                        if sucesso:
-                            st.success(mensagem)
-                        else:
-                            st.error(mensagem)
-                    else:
-                        st.warning("⚠️ Preencha email e senha primeiro")
-
-                # ADICIONAR AQUI:
-                if st.button("🔍 Descobrir Estrutura Yahoo", type="secondary"):
-                    if yahoo_email and yahoo_token:
-                        salvar_configuracao("yahoo_email", yahoo_email)
-                        salvar_configuracao("yahoo_token", yahoo_token)
-                        
-                        with st.spinner("Descobrindo estrutura do calendário..."):
-                            status, resposta = descobrir_estrutura_yahoo()
-                            
-                        st.info(f"📊 Status: {status}")
-                        st.code(resposta, language="xml")
-                        
-                        if status == 207:
-                            st.success("✅ Estrutura descoberta! Procure pelos caminhos <href> acima")
-                        else:
-                            st.error("❌ Erro ao descobrir estrutura")
-                    else:
-                        st.warning("⚠️ Preencha email e senha primeiro")
-
-                if st.button("📅 Descobrir Calendários", type="secondary"):
-                    if yahoo_email and yahoo_token:
-                        salvar_configuracao("yahoo_email", yahoo_email)
-                        salvar_configuracao("yahoo_token", yahoo_token)
-                        
-                        with st.spinner("Descobrindo calendários disponíveis..."):
-                            status, resposta = descobrir_calendarios_yahoo()
-                            
-                        st.info(f"📊 Status: {status}")
-                        st.code(resposta, language="xml")
-                        
-                        if status == 207:
-                            st.success("✅ Calendários descobertos! Procure por <calendar-home-set> acima")
-                        else:
-                            st.error("❌ Erro ao descobrir calendários")
-                    else:
-                        st.warning("⚠️ Preencha email e senha primeiro")
-                
-                # Botão para salvar
-                if st.button("💾 Salvar Configurações Yahoo", type="primary"):
-                    salvar_configuracao("yahoo_ativo", yahoo_ativo)
-                    if yahoo_ativo:
-                        salvar_configuracao("yahoo_email", yahoo_email)
-                        salvar_configuracao("yahoo_token", yahoo_token)
-                        salvar_configuracao("yahoo_calendar_url", yahoo_calendar_url)
-                        salvar_configuracao("yahoo_calendar_name", yahoo_calendar_name)
-                    st.success("✅ Configurações do Yahoo Calendar salvas!")
-
-            else:
-                st.info("💡 A integração com Yahoo Calendar transforma cada agendamento em um evento no seu calendário")
                 
                 # Benefícios
                 col1, col2 = st.columns(2)
