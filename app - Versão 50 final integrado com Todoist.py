@@ -3117,6 +3117,17 @@ END:VCALENDAR"""
             data=ical_content.encode('utf-8'),
             timeout=15
         )
+
+        # ADICIONAR AQUI:
+        st.info(f"🔍 DEBUG: Response status: {response.status_code}")
+        st.info(f"🔍 DEBUG: Response text: {response.text[:200]}...")  # Primeiros 200 chars
+
+        if response.status_code in [201, 204]:
+            st.success(f"✅ Evento Yahoo criado com sucesso: {nome_cliente}")
+            # resto...
+        else:
+            st.error(f"❌ DEBUG: Erro na criação - Status: {response.status_code}")
+            return False
         
         if response.status_code in [201, 204]:
             st.success(f"✅ Evento Yahoo criado com sucesso: {nome_cliente}")
