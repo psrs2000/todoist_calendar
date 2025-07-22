@@ -4836,6 +4836,40 @@ Sistema de Agendamento Online
                             st.rerun()
                         else:
                             st.warning("⚠️ Digite um nome para o projeto")
+
+                # ========================================
+                # SEÇÃO YAHOO CALENDAR (NOVO!)
+                # ========================================
+
+                st.markdown("---")
+                st.subheader("📅 Integração com Yahoo Calendar")
+
+                yahoo_ativo = st.checkbox(
+                    "Ativar sincronização com Yahoo Calendar",
+                    value=obter_configuracao("yahoo_ativo", False),
+                    help="Cria eventos automaticamente no Yahoo Calendar para cada agendamento"
+                )
+
+                if yahoo_ativo:
+                    st.success("✅ Integração com Yahoo Calendar ativada")
+                    
+                    yahoo_token = st.text_input(
+                        "Token do Yahoo Calendar:",
+                        value=obter_configuracao("yahoo_token", ""),
+                        type="password",
+                        placeholder="Token do Yahoo Calendar API",
+                        help="Token de acesso ao Yahoo Calendar"
+                    )
+                    
+                    # Botão para salvar
+                    if st.button("💾 Salvar Configurações Yahoo", type="primary"):
+                        salvar_configuracao("yahoo_ativo", yahoo_ativo)
+                        if yahoo_ativo:
+                            salvar_configuracao("yahoo_token", yahoo_token)
+                        st.success("✅ Configurações do Yahoo Calendar salvas!")
+
+                else:
+                    st.info("💡 A integração com Yahoo Calendar transforma cada agendamento em um evento no seu calendário")
                 
                 # Salvar configurações
                 st.markdown("---")
