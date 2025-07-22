@@ -3241,6 +3241,43 @@ def descobrir_estrutura_yahoo():
         
     except Exception as e:
         return 0, str(e)
+ 
+def descobrir_calendarios_yahoo():
+    """Descobre os calendários disponíveis do usuário"""
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        
+        email_yahoo = obter_configuracao("yahoo_email", "")
+        senha_app = obter_configuracao("yahoo_token", "")
+        
+        # URL do usuário descoberta
+        user_url = "https://caldav.calendar.yahoo.com/principals/users/psrs55/"
+        
+        # PROPFIND para descobrir calendários
+        propfind_xml = """<?xml version="1.0" encoding="utf-8" ?>
+<D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:prop>
+    <C:calendar-home-set />
+  </D:prop>
+</D:propfind>"""
+        
+        response = requests.request(
+            "PROPFIND",
+            user_url,
+            auth=HTTPBasicAuth(email_yahoo, senha_app),
+            headers={
+                "Content-Type": "application/xml",
+                "Depth": "0"
+            },
+            data=propfind_xml,
+            timeout=15
+        )
+        
+        return response.status_code, response.text
+        
+    except Exception as e:
+        return 0, str(e) 
     
 # Inicializar banco
 init_config()
@@ -5248,6 +5285,24 @@ Sistema de Agendamento Online
                             st.success("✅ Estrutura descoberta! Procure pelos caminhos <href> acima")
                         else:
                             st.error("❌ Erro ao descobrir estrutura")
+                    else:
+                        st.warning("⚠️ Preencha email e senha primeiro")
+
+                if st.button("📅 Descobrir Calendários", type="secondary"):
+                    if yahoo_email and yahoo_token:
+                        salvar_configuracao("yahoo_email", yahoo_email)
+                        salvar_configuracao("yahoo_token", yahoo_token)
+                        
+                        with st.spinner("Descobrindo calendários disponíveis..."):
+                            status, resposta = descobrir_calendarios_yahoo()
+                            
+                        st.info(f"📊 Status: {status}")
+                        st.code(resposta, language="xml")
+                        
+                        if status == 207:
+                            st.success("✅ Calendários descobertos! Procure por <calendar-home-set> acima")
+                        else:
+                            st.error("❌ Erro ao descobrir calendários")
                     else:
                         st.warning("⚠️ Preencha email e senha primeiro")
                 
