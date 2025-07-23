@@ -14,7 +14,10 @@ import json
 import traceback
 import requests
 import base64
-
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import PlainTextResponse
+import uvicorn
+import asyncio
 # Verificar se é modo admin (versão dinâmica corrigida)
 is_admin = False
 try:
@@ -2928,6 +2931,86 @@ def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
     except Exception as e:
         print(f"❌ Erro ao buscar tarefa: {e}")
         return None 
+
+# ========================================
+# SERVIDOR CALDAV
+# ========================================
+
+# Criar instância FastAPI
+caldav_app = FastAPI(title="Sistema Agendamento CalDAV")
+
+@caldav_app.api_route("/caldav/", methods=["PROPFIND", "GET", "OPTIONS"])
+async def caldav_root(request: Request):
+    """Endpoint raiz do CalDAV"""
+    
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=200,
+            headers={
+                "Allow": "OPTIONS, PROPFIND, GET",
+                "DAV": "1, 2, calendar-access",
+                "Content-Type": "text/xml; charset=utf-8",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PROPFIND, OPTIONS"
+            }
+        )
+    
+    if request.method == "PROPFIND":
+        xml_response = """<?xml version="1.0" encoding="UTF-8"?>
+<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <response>
+    <href>/caldav/</href>
+    <propstat>
+      <prop>
+        <displayname>Sistema de Agendamento</displayname>
+        <resourcetype>
+          <collection/>
+        </resourcetype>
+        <current-user-principal>
+          <href>/caldav/principals/admin/</href>
+        </current-user-principal>
+      </prop>
+      <status>HTTP/1.1 200 OK</status>
+    </propstat>
+  </response>
+</multistatus>"""
+        
+        return Response(
+            content=xml_response,
+            status_code=207,
+            headers={
+                "Content-Type": "text/xml; charset=utf-8",
+                "DAV": "1, 2, calendar-access"
+            }
+        )
+    
+    return PlainTextResponse("Sistema de Agendamento CalDAV - Funcionando!", status_code=200)
+
+@caldav_app.get("/")
+async def root():
+    """Página inicial do servidor CalDAV"""
+    return {"message": "Servidor CalDAV do Sistema de Agendamento está funcionando!"}
+
+def iniciar_servidor_caldav():
+    """Inicia servidor CalDAV"""
+    try:
+        # No Streamlit Cloud, usar porta dinâmica
+        import os
+        port = int(os.environ.get("PORT", 8001))
+        uvicorn.run(caldav_app, host="0.0.0.0", port=port, log_level="info")
+    except Exception as e:
+        print(f"Erro ao iniciar servidor CalDAV: {e}")
+
+# Função para iniciar em background
+def start_caldav_if_main():
+    """Inicia CalDAV apenas se for o arquivo principal"""
+    if __name__ == "__main__":
+        print("🚀 Iniciando servidor CalDAV...")
+        thread = threading.Thread(target=iniciar_servidor_caldav, daemon=True)
+        thread.start()
+
+# Chamar a função
+start_caldav_if_main()
     
 # Inicializar banco
 init_config()
