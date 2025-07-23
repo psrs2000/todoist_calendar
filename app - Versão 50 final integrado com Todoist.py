@@ -2933,84 +2933,69 @@ def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
         return None 
 
 # ========================================
-# SERVIDOR CALDAV
+# SERVIDOR CALDAV INTEGRADO
 # ========================================
 
-# Criar instância FastAPI
-caldav_app = FastAPI(title="Sistema Agendamento CalDAV")
-
-@caldav_app.api_route("/caldav/", methods=["PROPFIND", "GET", "OPTIONS"])
-async def caldav_root(request: Request):
-    """Endpoint raiz do CalDAV"""
-    
-    if request.method == "OPTIONS":
-        return Response(
-            status_code=200,
-            headers={
-                "Allow": "OPTIONS, PROPFIND, GET",
-                "DAV": "1, 2, calendar-access",
-                "Content-Type": "text/xml; charset=utf-8",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PROPFIND, OPTIONS"
-            }
-        )
-    
-    if request.method == "PROPFIND":
-        xml_response = """<?xml version="1.0" encoding="UTF-8"?>
-<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-  <response>
-    <href>/caldav/</href>
-    <propstat>
-      <prop>
-        <displayname>Sistema de Agendamento</displayname>
-        <resourcetype>
-          <collection/>
-        </resourcetype>
-        <current-user-principal>
-          <href>/caldav/principals/admin/</href>
-        </current-user-principal>
-      </prop>
-      <status>HTTP/1.1 200 OK</status>
-    </propstat>
-  </response>
-</multistatus>"""
-        
-        return Response(
-            content=xml_response,
-            status_code=207,
-            headers={
-                "Content-Type": "text/xml; charset=utf-8",
-                "DAV": "1, 2, calendar-access"
-            }
-        )
-    
-    return PlainTextResponse("Sistema de Agendamento CalDAV - Funcionando!", status_code=200)
-
-@caldav_app.get("/")
-async def root():
-    """Página inicial do servidor CalDAV"""
-    return {"message": "Servidor CalDAV do Sistema de Agendamento está funcionando!"}
-
-def iniciar_servidor_caldav():
-    """Inicia servidor CalDAV"""
+def handle_caldav_request():
+    """Processa requisições CalDAV via query params"""
     try:
-        # No Streamlit Cloud, usar porta dinâmica
-        import os
-        port = int(os.environ.get("PORT", 8001))
-        uvicorn.run(caldav_app, host="0.0.0.0", port=port, log_level="info")
+        # Verificar se é uma requisição CalDAV
+        query_params = st.experimental_get_query_params()
+        
+        if 'caldav' in query_params:
+            action = query_params.get('caldav', [''])[0]
+            
+            if action == 'root':
+                # Resposta raiz do CalDAV
+                st.text("""
+Sistema de Agendamento CalDAV
+
+Servidor: https://tdscalendar.streamlit.app/?caldav=root
+Usuário: admin
+Senha: [configurar]
+
+Status: Funcionando ✅
+                """)
+                return True
+                
+            elif action == 'events':
+                # Listar eventos (agendamentos)
+                st.text("📅 Listando agendamentos como eventos CalDAV...")
+                listar_agendamentos_caldav()
+                return True
+        
+        return False
+        
     except Exception as e:
-        print(f"Erro ao iniciar servidor CalDAV: {e}")
+        st.error(f"Erro CalDAV: {e}")
+        return False
 
-# Função para iniciar em background
-def start_caldav_if_main():
-    """Inicia CalDAV apenas se for o arquivo principal"""
-    if __name__ == "__main__":
-        print("🚀 Iniciando servidor CalDAV...")
-        thread = threading.Thread(target=iniciar_servidor_caldav, daemon=True)
-        thread.start()
+def listar_agendamentos_caldav():
+    """Lista agendamentos no formato CalDAV"""
+    try:
+        conn = conectar()
+        c = conn.cursor()
+        c.execute("SELECT * FROM agendamentos WHERE status IN ('confirmado', 'pendente') ORDER BY data, horario")
+        agendamentos = c.fetchall()
+        conn.close()
+        
+        st.text(f"📊 Total de agendamentos: {len(agendamentos)}")
+        
+        for agendamento in agendamentos:
+            id_agendamento = agendamento[0]
+            data = agendamento[1]
+            horario = agendamento[2] 
+            nome = agendamento[3]
+            status = agendamento[6] if len(agendamento) > 6 else 'confirmado'
+            
+            st.text(f"• {data} {horario} - {nome} ({status})")
+            
+    except Exception as e:
+        st.error(f"Erro ao listar agendamentos: {e}")
 
-# Chamar a função
-start_caldav_if_main()
+# Verificar se é requisição CalDAV
+if handle_caldav_request():
+    st.stop()  # Para a execução normal do Streamlit
     
 # Inicializar banco
 init_config()
