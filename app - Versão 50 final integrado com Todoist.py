@@ -2939,28 +2939,21 @@ def buscar_tarefa_todoist_por_data_hora(data, nome_cliente):
 def handle_caldav_request():
     """Processa requisições CalDAV via query params"""
     try:
-        # Verificar se é uma requisição CalDAV
         query_params = st.query_params
         
         if 'caldav' in query_params:
+            # Verificar autenticação primeiro
+            if not verificar_auth_caldav():
+                mostrar_auth_caldav()
+                return True
+            
             action = query_params.get('caldav', '')
             
             if action == 'root':
-                # Resposta raiz do CalDAV
-                st.text("""
-Sistema de Agendamento CalDAV
-
-Servidor: https://tdscalendar.streamlit.app/?caldav=root
-Usuário: admin
-Senha: [configurar]
-
-Status: Funcionando ✅
-                """)
+                mostrar_caldav_root()
                 return True
                 
             elif action == 'events':
-                # Listar eventos (agendamentos)
-                st.text("📅 Listando agendamentos como eventos CalDAV...")
                 listar_agendamentos_caldav()
                 return True
         
@@ -2969,6 +2962,45 @@ Status: Funcionando ✅
     except Exception as e:
         st.error(f"Erro CalDAV: {e}")
         return False
+
+def verificar_auth_caldav():
+    """Verifica autenticação CalDAV"""
+    # Por enquanto, só verificar se tem usuário/senha nos query params
+    query_params = st.query_params
+    
+    usuario = query_params.get('user', '')
+    senha = query_params.get('pass', '')
+    
+    # DEBUG
+    st.info(f"🔍 DEBUG: user='{usuario}', pass='{senha}'")    
+    
+    # Credenciais fixas por enquanto
+    
+    st.info(f"🔍 DEBUG: Autenticação = {auth_ok}")
+    
+    return usuario == 'admin' and senha == '123456'
+
+def mostrar_auth_caldav():
+    """Mostra tela de autenticação"""
+    st.error("🔐 Acesso negado!")
+    st.info("**Credenciais necessárias:**")
+    st.code("Usuário: admin")
+    st.code("Senha: 123456")
+    st.info("**URL correta:**")
+    st.code("https://tdscalendar.streamlit.app/?caldav=root&user=admin&pass=123456")
+
+def mostrar_caldav_root():
+    """Mostra informações do servidor CalDAV"""
+    st.success("🔐 Autenticado com sucesso!")
+    st.text("""
+Sistema de Agendamento CalDAV
+
+Servidor: https://tdscalendar.streamlit.app/?caldav=root&user=admin&pass=123456
+Usuário: admin  
+Senha: 123456
+
+Status: Funcionando ✅ Autenticado ✅
+    """)
 
 def listar_agendamentos_caldav():
     """Lista agendamentos no formato CalDAV"""
