@@ -2940,10 +2940,10 @@ def handle_caldav_request():
     """Processa requisições CalDAV via query params"""
     try:
         # Verificar se é uma requisição CalDAV
-        query_params = st.experimental_get_query_params()
+        query_params = st.query_params
         
         if 'caldav' in query_params:
-            action = query_params.get('caldav', [''])[0]
+            action = query_params.get('caldav', '')
             
             if action == 'root':
                 # Resposta raiz do CalDAV
