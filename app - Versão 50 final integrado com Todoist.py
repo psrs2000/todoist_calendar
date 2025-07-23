@@ -3008,37 +3008,60 @@ Status: Funcionando ✅ Autenticado ✅
     """)
 
 def listar_agendamentos_caldav():
-    """Lista agendamentos no formato iCalendar - DEBUG"""
+    """Lista agendamentos no formato iCalendar"""
     try:
         conn = conectar()
         c = conn.cursor()
-        c.execute("SELECT * FROM agendamentos WHERE status IN ('confirmado', 'pendente') ORDER BY data, horario LIMIT 3")
+        c.execute("SELECT * FROM agendamentos WHERE status IN ('confirmado', 'pendente') ORDER BY data, horario")
         agendamentos = c.fetchall()
         conn.close()
         
-        st.info(f"📊 Debug: {len(agendamentos)} agendamentos encontrados")
+        # Cabeçalho iCalendar
+        ical_content = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sistema Agendamento//CalDAV//PT
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+"""
         
-        for i, agendamento in enumerate(agendamentos):
-            st.text(f"Agendamento {i+1}:")
-            st.text(f"  Total de colunas: {len(agendamento)}")
-            
-            for j, campo in enumerate(agendamento):
-                st.text(f"  [{j}] = '{campo}'")
-            
-            st.text("---")
+        # Adicionar cada agendamento como evento
+        from datetime import datetime, timedelta
         
-        # Mostrar também as colunas da tabela
-        c = conectar().cursor()
-        c.execute("PRAGMA table_info(agendamentos)")
-        colunas = c.fetchall()
-        conectar().close()
-        
-        st.text("📋 Estrutura da tabela:")
-        for col in colunas:
-            st.text(f"  {col[1]} ({col[2]})")
+        for agendamento in agendamentos:
+            id_agendamento = agendamento[0]    # [0] = ID
+            nome = agendamento[1]              # [1] = NOME_CLIENTE
+            telefone = agendamento[2]          # [2] = TELEFONE  
+            data = agendamento[3]              # [3] = DATA
+            horario = agendamento[4]           # [4] = HORARIO
+            email = agendamento[5]             # [5] = EMAIL
+            status = agendamento[6]            # [6] = STATUS
             
+            # Converter para datetime
+            data_hora = datetime.strptime(f"{data} {horario}", "%Y-%m-%d %H:%M")
+            fim = data_hora + timedelta(hours=1)  # 1 hora de duração
+            
+            # Adicionar evento iCalendar
+            ical_content += f"""BEGIN:VEVENT
+UID:agendamento-{id_agendamento}@tdscalendar.streamlit.app
+DTSTART:{data_hora.strftime('%Y%m%dT%H%M%S')}
+DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
+SUMMARY:{nome} - Consulta
+DESCRIPTION:Cliente: {nome}\\nTelefone: {telefone}\\nEmail: {email}\\nStatus: {status}
+STATUS:CONFIRMED
+CREATED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
+LAST-MODIFIED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
+END:VEVENT
+"""
+        
+        # Fechar iCalendar
+        ical_content += "END:VCALENDAR"
+        
+        # Mostrar resultado
+        st.success(f"📅 {len(agendamentos)} eventos em formato iCalendar:")
+        st.code(ical_content, language="text")
+        
     except Exception as e:
-        st.error(f"Erro no debug: {e}")
+        st.error(f"Erro ao gerar iCalendar: {e}")
 
 # Verificar se é requisição CalDAV
 if handle_caldav_request():
