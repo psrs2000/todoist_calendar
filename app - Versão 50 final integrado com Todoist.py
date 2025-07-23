@@ -2965,20 +2965,25 @@ def handle_caldav_request():
 
 def verificar_auth_caldav():
     """Verifica autenticação CalDAV"""
-    # Por enquanto, só verificar se tem usuário/senha nos query params
-    query_params = st.query_params
-    
-    usuario = query_params.get('user', '')
-    senha = query_params.get('pass', '')
-    
-    # DEBUG
-    st.info(f"🔍 DEBUG: user='{usuario}', pass='{senha}'")    
-    
-    # Credenciais fixas por enquanto
-    
-    st.info(f"🔍 DEBUG: Autenticação = {auth_ok}")
-    
-    return usuario == 'admin' and senha == '123456'
+    try:
+        query_params = st.query_params
+        
+        usuario = query_params.get('user', '')
+        senha = query_params.get('pass', '')
+        
+        # DEBUG
+        st.info(f"🔍 DEBUG: user='{usuario}', pass='{senha}'")
+        
+        # Credenciais fixas por enquanto
+        auth_ok = usuario == 'admin' and senha == '123456'
+        
+        st.info(f"🔍 DEBUG: Autenticação = {auth_ok}")
+        
+        return auth_ok
+        
+    except Exception as e:
+        st.error(f"Erro na autenticação: {e}")
+        return False
 
 def mostrar_auth_caldav():
     """Mostra tela de autenticação"""
