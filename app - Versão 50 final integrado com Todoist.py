@@ -2968,21 +2968,23 @@ def verificar_auth_caldav():
     try:
         query_params = st.query_params
         
+        # Método 1: Via URL (nossos testes)
         usuario = query_params.get('user', '')
         senha = query_params.get('pass', '')
         
-        # DEBUG
-        st.info(f"🔍 DEBUG: user='{usuario}', pass='{senha}'")
+        # Método 2: Via HTTP Basic Auth (OneCalendar)
+        # TODO: Implementar depois se necessário
         
-        # Credenciais fixas por enquanto
+        # Por enquanto, aceitar ambos
+        if not usuario or not senha:
+            # Se não tem na URL, aceitar qualquer coisa (temporário)
+            return True
+        
+        # Verificar credenciais
         auth_ok = usuario == 'admin' and senha == '123456'
-        
-        st.info(f"🔍 DEBUG: Autenticação = {auth_ok}")
-        
         return auth_ok
         
     except Exception as e:
-        st.error(f"Erro na autenticação: {e}")
         return False
 
 def mostrar_auth_caldav():
