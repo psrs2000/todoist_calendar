@@ -3008,7 +3008,7 @@ Status: Funcionando ✅ Autenticado ✅
     """)
 
 def listar_agendamentos_caldav():
-    """Lista agendamentos no formato CalDAV"""
+    """Lista agendamentos no formato iCalendar"""
     try:
         conn = conectar()
         c = conn.cursor()
@@ -3016,19 +3016,52 @@ def listar_agendamentos_caldav():
         agendamentos = c.fetchall()
         conn.close()
         
-        st.text(f"📊 Total de agendamentos: {len(agendamentos)}")
+        # Cabeçalho iCalendar
+        ical_content = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sistema Agendamento//CalDAV//PT
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+"""
+        
+        # Adicionar cada agendamento como evento
+        from datetime import datetime, timedelta
         
         for agendamento in agendamentos:
             id_agendamento = agendamento[0]
-            data = agendamento[1]
-            horario = agendamento[2] 
+            data = agendamento[1]  # YYYY-MM-DD
+            horario = agendamento[2]  # HH:MM
             nome = agendamento[3]
+            telefone = agendamento[4] if len(agendamento) > 4 else ''
+            email = agendamento[5] if len(agendamento) > 5 else ''
             status = agendamento[6] if len(agendamento) > 6 else 'confirmado'
             
-            st.text(f"• {data} {horario} - {nome} ({status})")
+            # Converter para datetime
+            data_hora = datetime.strptime(f"{data} {horario}", "%Y-%m-%d %H:%M")
+            fim = data_hora + timedelta(hours=1)  # 1 hora de duração
             
+            # Adicionar evento iCalendar
+            ical_content += f"""BEGIN:VEVENT
+UID:agendamento-{id_agendamento}@tdscalendar.streamlit.app
+DTSTART:{data_hora.strftime('%Y%m%dT%H%M%S')}
+DTEND:{fim.strftime('%Y%m%dT%H%M%S')}
+SUMMARY:{nome} - Consulta
+DESCRIPTION:Cliente: {nome}\\nTelefone: {telefone}\\nEmail: {email}\\nStatus: {status}
+STATUS:CONFIRMED
+CREATED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
+LAST-MODIFIED:{datetime.now().strftime('%Y%m%dT%H%M%SZ')}
+END:VEVENT
+"""
+        
+        # Fechar iCalendar
+        ical_content += "END:VCALENDAR"
+        
+        # Mostrar resultado
+        st.success(f"📅 {len(agendamentos)} eventos em formato iCalendar:")
+        st.code(ical_content, language="text")
+        
     except Exception as e:
-        st.error(f"Erro ao listar agendamentos: {e}")
+        st.error(f"Erro ao gerar iCalendar: {e}")
 
 # Verificar se é requisição CalDAV
 if handle_caldav_request():
