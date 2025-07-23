@@ -3040,6 +3040,9 @@ def listar_agendamentos_caldav():
     except Exception as e:
         st.error(f"Erro no debug: {e}")
 
+# Verificar se é requisição CalDAV
+if handle_caldav_request():
+    st.stop()  # Para a execução normal do Streamlit
     
 # Inicializar banco
 init_config()
